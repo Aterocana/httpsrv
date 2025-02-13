@@ -1,4 +1,4 @@
-module github.com/Aterocana/httpserve
+module github.com/Aterocana/httpsrv
 
 go 1.24
 
