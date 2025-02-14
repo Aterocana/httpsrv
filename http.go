@@ -1,6 +1,7 @@
-package main
+package httpsrv
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
@@ -11,6 +12,12 @@ import (
 	"strings"
 )
 
+type Server struct {
+	httpSrv  *http.Server
+	listener net.Listener
+	out      io.Writer
+}
+
 func logRequest(out io.Writer, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(out, "[%s] %s\n", r.Method, r.URL.Path)
@@ -18,23 +25,47 @@ func logRequest(out io.Writer, h http.Handler) http.Handler {
 	})
 }
 
-// server creates a [http.Server], which is returned, and it starts to accept requests in a goroutine.
-func server(path string, port int) *http.Server {
-	root := must(os.OpenRoot(path))
-	listener := must(net.Listen("tcp", fmt.Sprintf(":%d", port)))
+func New(opts ...Options) (*Server, error) {
+	cfg := buildConfig(opts...)
+	return newSrv(cfg)
+}
+
+func newSrv(cfg *config) (*Server, error) {
+	root, err := os.OpenRoot(cfg.path)
+	if err != nil {
+		return nil, fmt.Errorf("could not open %s: %w", cfg.path, err)
+	}
+
 	protocols := &http.Protocols{}
 	protocols.SetHTTP1(true)
 	protocols.SetUnencryptedHTTP2(true)
+
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.port))
+	if err != nil {
+		return nil, fmt.Errorf("could not listen to port %d: %w", cfg.port, err)
+	}
 
 	srv := http.Server{
 		Handler:   logRequest(os.Stdout, http.FileServerFS(root.FS())),
 		Protocols: protocols,
 	}
-	addr := fmt.Sprintf("http://localhost:%d", listener.Addr().(*net.TCPAddr).Port)
-	fmt.Printf("listening on %s\n", addr)
+
+	return &Server{
+		httpSrv:  &srv,
+		listener: listener,
+	}, nil
+}
+
+func (srv *Server) Open() error {
+	addr := fmt.Sprintf("http://localhost:%d", srv.listener.Addr().(*net.TCPAddr).Port)
+	go srv.httpSrv.Serve(srv.listener)
 	openURL(addr)
-	go must[*uint8](nil, srv.Serve(listener))
-	return &srv
+	fmt.Printf("listening on %s\n", addr)
+	return nil
+}
+
+func (srv *Server) Close(ctx context.Context) error {
+	return srv.httpSrv.Shutdown(ctx)
 }
 
 // openURL opens the url in the broswer.

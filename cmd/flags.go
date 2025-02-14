@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"time"
+
+	"github.com/Aterocana/httpsrv"
 )
 
 const dateLayout = "2006/01/02-15:04:05"
@@ -16,7 +18,7 @@ var (
 )
 
 // flags parses cmd line flags and it returns the path and the port to use.
-func flags() (string, int) {
+func flags() []httpsrv.Options {
 	var path string
 	var port int
 	var askHelp bool
@@ -40,5 +42,9 @@ func flags() (string, int) {
 		fmt.Printf("%s (#%s) build on %s\n", version, gitCommit, buildDateTime)
 		os.Exit(0)
 	}
-	return path, port
+	return []httpsrv.Options{
+		httpsrv.WithPort(port),
+		httpsrv.WithPath(path),
+		httpsrv.WithLogger(os.Stdout),
+	}
 }

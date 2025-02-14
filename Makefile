@@ -1,5 +1,6 @@
 _@=@
 BASE=$(shell pwd)
+MAIN=$(BASE)/cmd
 SRC_FILES=$(wildcard *.go) $(wildcard */*.go) $(wildcard */*/*.go)
 LDFLAGS=-ldflags "-X main.version=$(VERSION) -X main.buildDate=$(BUILD_DATE) -X main.gitCommit=$(GIT_COMMIT)"
 
@@ -9,7 +10,7 @@ GIT_COMMIT=$(shell git rev-parse --verify HEAD)
 GIT_UNTRACKEDCHANGES := $(shell git status --porcelain --untracked-files=no)
 
 $(BASE)/bin/srv: $(SRC_FILES)
-	$(_@) go build $(LDFLAGS) -o $@ $(GOBASE)
+	$(_@) go build $(LDFLAGS) -o $@ $(MAIN)
 
 build: $(BASE)/bin/srv
 

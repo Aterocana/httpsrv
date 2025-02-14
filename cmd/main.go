@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/signal"
 	"time"
+
+	"github.com/Aterocana/httpsrv"
 )
 
 // must forces function to have no errors, otherwise it panics.
@@ -18,7 +20,9 @@ func must[T any](arg T, err error) T {
 }
 
 func main() {
-	srv := server(flags())
+	opts := flags()
+	srv := must(httpsrv.New(opts...))
+	must[*uint8](nil, srv.Open())
 
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc, os.Interrupt)
@@ -27,5 +31,5 @@ func main() {
 
 	ctx, cancel := context.WithTimeoutCause(context.Background(), 5*time.Second, fmt.Errorf("timeout reached"))
 	defer cancel()
-	must[*uint8](nil, srv.Shutdown(ctx))
+	must[*uint8](nil, srv.Close(ctx))
 }
